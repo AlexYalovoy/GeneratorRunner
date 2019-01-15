@@ -1,34 +1,34 @@
 function runner(iterator) {
     const resultArr = [];
   
-    return new Promise( (resolve, reject) => {
-      function internalGen(generator, yieldV){
-        let next = generator.next(yieldV);
+    return new Promise( (resolve) => {
+      function getNextValue(yieldV){
+        let next = iterator.next(yieldV);
   
         if (!next.done) {
           if (next.value instanceof Promise) {
             next.value.then(
-              result => {
-                resultArr.push(result);
-                internalGen(generator, result)
+              v => {
+                resultArr.push(v);
+                getNextValue(v)
               },
-              result => {
-                resultArr.push(result);
-                internalGen(generator, result)
+              v => {
+                resultArr.push(v);
+                getNextValue(v)
               }
             );
           } else if (next.value instanceof Function) {
             resultArr.push(next.value());
-            internalGen(generator, next.value())
+            getNextValue(next.value())
           } else {
             resultArr.push(next.value);
-            internalGen(generator, next.value);
+            getNextValue(next.value);
           }
         } else {
           resolve(resultArr);
         }
       }
-      internalGen(iterator)
+      getNextValue(iterator)
     });
   }
 
