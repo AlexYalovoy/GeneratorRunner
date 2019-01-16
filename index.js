@@ -1,36 +1,42 @@
 function runner(iterator) {
-    const resultArr = [];
-  
-    return new Promise( (resolve) => {
-      function getNextValue(yieldV){
-        let next = iterator.next(yieldV);
-  
-        if (!next.done) {
-          if (next.value instanceof Promise) {
-            next.value.then(
-              v => {
-                resultArr.push(v);
-                getNextValue(v)
-              },
-              v => {
-                resultArr.push(v);
-                getNextValue(v)
-              }
-            );
-          } else if (next.value instanceof Function) {
-            resultArr.push(next.value());
-            getNextValue(next.value())
-          } else {
-            resultArr.push(next.value);
-            getNextValue(next.value);
-          }
-        } else {
-          resolve(resultArr);
-        }
-      }
-      getNextValue(iterator)
-    });
+  // If promise - it use in spot
+  function getDesirableValue(value) {
+    if (value instanceof Promise) {
+      return value;
+    } else if (value instanceof Function) {
+      return value();
+    } else {
+      return value;
+    }
   }
+
+  return new Promise( (resolve) => {
+    const resultArr = [];
+
+    // Called for each iterator value
+    (function handleNextValue(yieldValue) {
+      const next = iterator.next(yieldValue);
+  
+      if (!next.done) {
+        const desirableValue = getDesirableValue(next.value);
+        if (desirableValue instanceof Promise) {
+          desirableValue.then( v => {
+              resultArr.push(v);
+              handleNextValue(v);
+            }, v => {
+              resultArr.push(v);
+              handleNextValue(v);
+            } );
+        } else {
+          resultArr.push(desirableValue);
+          handleNextValue(desirableValue);
+        }
+      } else {
+          resolve(resultArr);
+      }
+    })();
+  });
+}
 
 function sum(a, b) {
   return a + b;
