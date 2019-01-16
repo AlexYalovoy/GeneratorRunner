@@ -1,12 +1,12 @@
 function runner(iterator) {
-  // If promise - it use in spot
+  // Wrap desirable value in promise for same behavior
   function getDesirableValue(value) {
     if (value instanceof Promise) {
       return value;
     } else if (value instanceof Function) {
-      return value();
+      return Promise.resolve(value());
     } else {
-      return value;
+      return Promise.resolve(value);
     }
   }
 
@@ -18,19 +18,13 @@ function runner(iterator) {
       const next = iterator.next(yieldValue);
   
       if (!next.done) {
-        const desirableValue = getDesirableValue(next.value);
-        if (desirableValue instanceof Promise) {
-          desirableValue.then( v => {
-              resultArr.push(v);
-              handleNextValue(v);
-            }, v => {
-              resultArr.push(v);
-              handleNextValue(v);
-            } );
-        } else {
-          resultArr.push(desirableValue);
-          handleNextValue(desirableValue);
-        }
+        getDesirableValue(next.value).then( v => {
+            resultArr.push(v);
+            handleNextValue(v);
+          }, v => {
+            resultArr.push(v);
+            handleNextValue(v);
+          });
       } else {
           resolve(resultArr);
       }
