@@ -1,35 +1,36 @@
-function runner(iterator) {
-  // Wrap desirable value in promise for same behavior
-  function getDesirableValue(value) {
-    if (value instanceof Promise) {
-      return value;
-    } else if (value instanceof Function) {
-      return Promise.resolve(value());
-    } else {
-      return Promise.resolve(value);
+function getDesirableValue(value) {
+  if (value instanceof Function) {
+    let result = null;
+    try {
+      result = value();
+    } catch(err) {
+      return Promise.reject(err);
     }
+    return Promise.resolve(result);
   }
 
-  return new Promise( (resolve) => {
-    const resultArr = [];
+  return Promise.resolve(value);
+}
 
-    // Called for each iterator value
-    (function handleNextValue(yieldValue) {
-      const next = iterator.next(yieldValue);
-  
-      if (!next.done) {
-        getDesirableValue(next.value).then( v => {
-            resultArr.push(v);
-            handleNextValue(v);
-          }, v => {
-            resultArr.push(v);
-            handleNextValue(v);
-          });
-      } else {
-          resolve(resultArr);
-      }
-    })();
-  });
+function runner(iterator) {
+
+  function handleNextValue(yieldValue, resultArr = []) {
+    const {value, done} = iterator.next(yieldValue);
+    // console.log(resultArr)
+    if (!done) {
+      return getDesirableValue(value)
+        .then( v => {
+          resultArr.push(v);
+          return handleNextValue(v, resultArr);
+        }, v => {
+          resultArr.push(v);
+          return handleNextValue(v, resultArr);
+        });
+    }
+    
+    return Promise.resolve(resultArr);
+  };
+  return handleNextValue();
 }
 
 function sum(a, b) {
